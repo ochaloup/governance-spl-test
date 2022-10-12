@@ -1,0 +1,6 @@
+[[test.genesis]]
+address = "Govz1VyoyLD5BL6CSCxUJLVLsQHRwjfFj1prNsdNg5Jw"
+program = "res/spl-governance.so"
+
+[scripts]
+test = "pnpm jest"
