@@ -1,6 +1,7 @@
 import * as anchor from '@project-serum/anchor';
 import {Program} from '@project-serum/anchor';
 import {GovernanceSplTests} from '../target/types/governance_spl_tests';
+import {MultisigHelper} from '@marinade.finance/solana-test-utils'
 
 describe('governance-spl-tests', () => {
   // Configure the client to use the local cluster.
