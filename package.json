@@ -12,9 +12,10 @@
     "@project-serum/anchor": "^0.25.0"
   },
   "devDependencies": {
+    "@marinade.finance/solana-test-utils": "/home/chalda/marinade/solana-js-utils/packages/solana-test-utils/",
+    "@marinade.finance/solana-cli-utils": "/home/chalda/marinade/solana-js-utils/packages/solana-cli-utils",
     "@gokiprotocol/client": "^0.11.1",
     "@marinade.finance/kedgeree-sdk": "^1.0.2",
-    "@marinade.finance/solana-test-utils": "^0.0.54",
     "@quarryprotocol/quarry-sdk": "^5.2.0",
     "@saberhq/anchor-contrib": ">=1.14.0 <2.0.0",
     "@saberhq/solana-contrib": "^1.14.9",
