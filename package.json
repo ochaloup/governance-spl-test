@@ -9,18 +9,18 @@
     "posttest": "pnpm lint"
   },
   "dependencies": {
-    "@project-serum/anchor": "^0.25.0"
+    "@project-serum/anchor": "^0.24.0"
   },
   "devDependencies": {
-    "@marinade.finance/solana-test-utils": "/home/chalda/marinade/solana-js-utils/packages/solana-test-utils/",
-    "@marinade.finance/solana-cli-utils": "/home/chalda/marinade/solana-js-utils/packages/solana-cli-utils",
+    "@marinade.finance/solana-test-utils": "0.0.63",
+    "@marinade.finance/solana-cli-utils": "0.0.58",
     "@gokiprotocol/client": "^0.11.1",
     "@marinade.finance/kedgeree-sdk": "^1.0.2",
     "@quarryprotocol/quarry-sdk": "^5.2.0",
     "@saberhq/anchor-contrib": ">=1.14.0 <2.0.0",
     "@saberhq/solana-contrib": "^1.14.9",
     "@saberhq/token-utils": ">=1.14.0 <2.0.0",
-    "@solana/spl-governance": "^0.3.13",
+    "@solana/spl-governance": "/home/chalda/marinade/oyster/packages/governance-sdk/lib/",
     "@solana/web3.js": ">=1.62.0 <2.0.0",
     "@types/jest": "^29.1.2",
     "@types/node": "^14.18.32",
@@ -32,6 +32,6 @@
     "jest-shell-matchers": "^1.0.2",
     "jsbi": ">=4.3.0 <5.0.0",
     "ts-jest": "^29.0.3",
-    "typescript": "~4.7.0"
+    "typescript": "4.7.4"
   }
 }

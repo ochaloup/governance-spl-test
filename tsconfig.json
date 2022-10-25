@@ -7,6 +7,6 @@
     "module": "commonjs",
     "target": "es6",
     "esModuleInterop": true,
-    "noImplicitAny": false
+    "noImplicitAny": false,
   }
 }

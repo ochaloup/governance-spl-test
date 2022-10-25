@@ -1,6 +1,6 @@
 [[test.genesis]]
-address = "Govz1VyoyLD5BL6CSCxUJLVLsQHRwjfFj1prNsdNg5Jw"
+address = "GovER5Lthms3bLBqWub97yVrMmEogzX7xNjdXpPPCVZw"
 program = "res/spl_governance.so"
 
 [scripts]
-test = "pnpm jest"
+test = "pnpm jest --detectOpenHandles"

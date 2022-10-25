@@ -1,0 +1,30 @@
+= Governance SPL testing
+
+The tests uses the JS anchor test to start the _solana test validator_
+and deploys the code of the https://github.com/solana-labs/solana-program-library/blob/master/governance[SPL Governance].
+
+Then the JS tests runs with help of the JS utils https://github.com/marinade-finance/solana-js-utils/tree/main/packages
+(`@marinade.finance/solana-test-utils`, `@marinade.finance/solana-cli-utils`).
+
+The anchor setup was done with `anchor init` where `mocha-ts`/`yarn` is used.
+That gets an issues on use of JS utils and project was moved to `jest`/`pnmp` as configured the js utils project.
+
+== Development
+
+=== How to run
+
+The code gets `.so` from `res/` directory how it's configured in `Test.toml`
+and starts the validator.
+
+[source,sh]
+----
+anchor test --skip-lint --skip-build
+----
+
+=== Issues
+
+The trouble of using Anchor and the Solana SDK JS is a bit of in clash of versions.
+
+The reason is that the typescript must be exact same version as `solata-test-utils`.
+New version of typescript is not working with anchor.
+There is a need to downgrade typescript version in `package.json` (`tsc` used from `node_modules`)
