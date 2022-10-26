@@ -3,6 +3,7 @@ import { Program, AnchorProvider} from '@project-serum/anchor';
 import { GovernanceSplTests } from '../target/types/governance_spl_tests';
 
 import BN from 'bn.js';
+import {expect} from '@jest/globals';
 
 import { 
   Keypair,
@@ -277,6 +278,7 @@ describe('governance-spl-tests', () => {
 
     const proposalFinalizedData = await getProposal(solanaProvider.connection, proposalPubkey);
     console.log("OK finalized proposal state: ", proposalFinalizedData.account.state);
+    expect(proposalFinalizedData.account.state).toEqual(3); // Succeed
     console.log("OK finalized proposal options: ", proposalFinalizedData.account.options);
   });
 });

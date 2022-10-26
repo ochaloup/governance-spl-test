@@ -12,10 +12,10 @@
     "@project-serum/anchor": "^0.24.0"
   },
   "devDependencies": {
-    "@marinade.finance/solana-test-utils": "0.0.63",
-    "@marinade.finance/solana-cli-utils": "0.0.58",
     "@gokiprotocol/client": "^0.11.1",
     "@marinade.finance/kedgeree-sdk": "^1.0.2",
+    "@marinade.finance/solana-cli-utils": "0.0.58",
+    "@marinade.finance/solana-test-utils": "0.0.63",
     "@quarryprotocol/quarry-sdk": "^5.2.0",
     "@saberhq/anchor-contrib": ">=1.14.0 <2.0.0",
     "@saberhq/solana-contrib": "^1.14.9",
@@ -23,6 +23,7 @@
     "@solana/spl-governance": "/home/chalda/marinade/oyster/packages/governance-sdk/lib/",
     "@solana/web3.js": ">=1.62.0 <2.0.0",
     "@types/jest": "^29.1.2",
+    "@jest/globals": "^29.1.2",
     "@types/node": "^14.18.32",
     "@types/node-fetch": "^2.6.2",
     "bn.js": ">=5.2.1 <6.0.0",

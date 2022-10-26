@@ -2,6 +2,7 @@ lockfileVersion: 5.4
 
 specifiers:
   '@gokiprotocol/client': ^0.11.1
+  '@jest/globals': ^29.1.2
   '@marinade.finance/kedgeree-sdk': ^1.0.2
   '@marinade.finance/solana-cli-utils': 0.0.58
   '@marinade.finance/solana-test-utils': 0.0.63
@@ -29,6 +30,7 @@ dependencies:
 
 devDependencies:
   '@gokiprotocol/client': 0.11.1_kgifbzd5mlibea5cundqu5q64u
+  '@jest/globals': 29.2.2
   '@marinade.finance/kedgeree-sdk': 1.0.2_ajiyopte774ik5bv25e2ls2qee
   '@marinade.finance/solana-cli-utils': 0.0.58_vodt7f3bwfjp3c2oo42iiin2vi
   '@marinade.finance/solana-test-utils': 0.0.63_uv7zlqh5kn7pqjmkm7rflipwgi
