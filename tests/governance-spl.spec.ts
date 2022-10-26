@@ -101,7 +101,7 @@ describe('governance-spl-tests', () => {
   );
   const confirmOpts = (anchor.getProvider() as AnchorProvider).opts;
   // do we want the pre-flight or not? :-)
-  // confirmOpts.skipPreflight = true;
+  confirmOpts.skipPreflight = true;
   const solanaProvider = new SolanaProvider(
     anchor.getProvider().connection,
     broadcaster,
@@ -159,6 +159,9 @@ describe('governance-spl-tests', () => {
     //   side: side,
     // });
 
+    const numberChoices = 111;
+    const options =Array.from(Array(numberChoices).keys()).map(i => "" + i);
+    console.log("options", options)
     console.log(`Creating a proposal at ${realm.splGovId}, realm: ${realm.address}, governance: ${governanceData.pubkey}`)
     const txProposalCreation = new TransactionEnvelope(solanaProvider, []);
     const proposalPubkey = await withCreateProposal(
@@ -173,8 +176,8 @@ describe('governance-spl-tests', () => {
       coummunityMint.address,  // side == 'community'
       testUserTokenOwnerRecordHelper.owner.authority,
       governanceData.account.proposalCount,
-      VoteType.MULTI_CHOICE(3),
-      ["option 1", "option 2", "option 3"],
+      VoteType.MULTI_CHOICE(numberChoices),
+      options,
       false,  // useDenyOption
       solanaProvider.wallet.publicKey,
       undefined  // voterWeightRecord addin
@@ -185,6 +188,7 @@ describe('governance-spl-tests', () => {
     console.log("OK proposal vote type: ", proposalData.account.voteType);
     console.log("OK proposal state: ", proposalData.account.state);
     console.log("OK proposal options: ", proposalData.account.options);
+    if (1 == 1) return;
 
     const signer = testUserTokenOwnerRecordHelper.owner.canSign
       ? testUserTokenOwnerRecordHelper.owner
@@ -207,6 +211,13 @@ describe('governance-spl-tests', () => {
     console.log("OK sign off proposal state: ", proposalSignedOffData.account.state);
       
     // and when proposal is created and signed-off, let's cast a vote
+    const votes = [...new Array(numberChoices)].map(
+      i =>  new VoteChoice({
+        rank: 0,
+        weightPercentage: 0,
+      })
+    );
+    if (numberChoices > 0) votes[0].weightPercentage = 100; // first option voted at 100%
     const txVote = new TransactionEnvelope(solanaProvider, []);
     const voteRecordPublickey: PublicKey = await withCastVote(
       txVote.instructions,
@@ -221,20 +232,7 @@ describe('governance-spl-tests', () => {
       coummunityMint.address,
       new Vote({
         voteType: VoteKind.Approve,
-        approveChoices: [
-          new VoteChoice({
-            rank: 0,
-            weightPercentage: 100,
-          }),
-          new VoteChoice({
-            rank: 0,
-            weightPercentage: 0,
-          }),
-          new VoteChoice({
-            rank: 0,
-            weightPercentage: 0,
-          }),
-        ],
+        approveChoices: votes,
         deny: undefined,
         veto: undefined,
       }),
