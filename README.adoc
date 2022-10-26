@@ -21,6 +21,22 @@ and starts the validator.
 anchor test --skip-lint --skip-build
 ----
 
+How to have program logs from the genesis program `GovER5Lthms3bLBqWub97yVrMmEogzX7xNjdXpPPCVZw`
+defined at link:./Test.toml[Test.toml]? I don't know how to configure the Anchor to place the log
+under `./.anchor/program-logs` (anchor saves here the logs from `solana-test-validator` started on `anchor test`).
+Thus I need to get the log in the separate shell:
+
+[source,sh]
+----
+while true; do
+  PASSED=false
+  while ! $PASSED; do
+    solana logs -u localhost && PASSED=true
+    sleep 1
+  done
+done
+----
+
 === Issues
 
 The trouble of using Anchor and the Solana SDK JS is a bit of in clash of versions.
