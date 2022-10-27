@@ -160,7 +160,7 @@ describe('governance-spl-tests', () => {
     //   side: side,
     // });
 
-    const numberChoices = 111;
+    const numberChoices = 3;
     const options =Array.from(Array(numberChoices).keys()).map(i => "" + i);
     console.log("options", options)
     console.log(`Creating a proposal at ${realm.splGovId}, realm: ${realm.address}, governance: ${governanceData.pubkey}`)
@@ -179,7 +179,7 @@ describe('governance-spl-tests', () => {
       governanceData.account.proposalCount,
       VoteType.MULTI_CHOICE(numberChoices),
       options,
-      false,  // useDenyOption
+      true,  // useDenyOption; when set to true then final state of the proposal is `Succeeded(3)`, when false the final state is `Completed(5)`
       solanaProvider.wallet.publicKey,
       undefined  // voterWeightRecord addin
     );
@@ -189,7 +189,6 @@ describe('governance-spl-tests', () => {
     console.log("OK proposal vote type: ", proposalData.account.voteType);
     console.log("OK proposal state: ", proposalData.account.state);
     console.log("OK proposal options: ", proposalData.account.options);
-    if (1 == 1) return;
 
     const signer = testUserTokenOwnerRecordHelper.owner.canSign
       ? testUserTokenOwnerRecordHelper.owner
@@ -278,7 +277,7 @@ describe('governance-spl-tests', () => {
 
     const proposalFinalizedData = await getProposal(solanaProvider.connection, proposalPubkey);
     console.log("OK finalized proposal state: ", proposalFinalizedData.account.state);
-    expect(proposalFinalizedData.account.state).toEqual(3); // Succeed
+    expect(proposalFinalizedData.account.state).toEqual(3); // Succeed == 3, Completed == 3; depends on proposal config of the useDenyOption
     console.log("OK finalized proposal options: ", proposalFinalizedData.account.options);
   });
 });
