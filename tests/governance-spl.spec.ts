@@ -1,5 +1,5 @@
 import * as anchor from '@project-serum/anchor';
-import { Program, AnchorProvider} from '@project-serum/anchor';
+import { Program, AnchorProvider } from '@project-serum/anchor';
 import { GovernanceSplTests } from '../target/types/governance_spl_tests';
 
 import BN from 'bn.js';
@@ -7,7 +7,10 @@ import {expect} from '@jest/globals';
 
 import { 
   Keypair,
-  PublicKey
+  PublicKey,
+  TransactionInstruction,
+  GetVersionedTransactionConfig,
+  Connection,
 } from '@solana/web3.js';
 
 import { 
@@ -15,7 +18,7 @@ import {
   SolanaProvider,
   TieredBroadcaster,
   TransactionEnvelope,
-  TransactionReceipt
+  TransactionReceipt,
 } from '@saberhq/solana-contrib'
 
 import { 
@@ -38,19 +41,17 @@ import {
   withCastVote,
   getVoteRecord,
   withSignOffProposal,
-  withFinalizeVote
+  withFinalizeVote,
 } from '@solana/spl-governance';
 
-// import { KeypairSignerHelper } from '@marinade.finance/solana-test-utils';
-// import  { KeypairSignerHelper  } from '../node_modules/@marinade.finance/solana-test-utils/signer'
 import { 
   RealmHelper,
   MintHelper,
   TokenOwnerRecordHelper,
   KeypairSignerHelper,
   SplGovHelper,
-  ProposalHelper
 } from '@marinade.finance/solana-test-utils'
+import { inspect } from 'util';
 
 
 async function createGovernance({tokenOwnerRecord, yesVotePercentage}:{
@@ -93,7 +94,11 @@ async function createGovernance({tokenOwnerRecord, yesVotePercentage}:{
 
 describe('governance-spl-tests', () => {
   // Configure the client to use the local cluster.
-  anchor.setProvider(anchor.AnchorProvider.env());
+  // anchor.setProvider(anchor.AnchorProvider.env());
+  let anchorOptions = AnchorProvider.defaultOptions()
+  anchorOptions.commitment = "confirmed"
+  anchorOptions.preflightCommitment = "confirmed"
+  anchor.setProvider(anchor.AnchorProvider.local(undefined, anchorOptions))
 
   const broadcaster = new TieredBroadcaster(
     anchor.getProvider().connection,
@@ -114,6 +119,22 @@ describe('governance-spl-tests', () => {
     .GovernanceSplTests as Program<GovernanceSplTests>;
 
   it('MultiChoice governance setup', async () => {
+    const anchorProgramTxn = new TransactionEnvelope(solanaProvider, []);
+    const typedArray = new Uint8Array([175, 175, 109, 31, 13, 152, 155, 237]);
+    // from anchor extend - check for 'match sighash'
+    const anchorProgramIx = new TransactionInstruction({data: Buffer.from(typedArray), keys: [], programId: program.programId  })
+    anchorProgramTxn.instructions.push(anchorProgramIx)
+    const pendingTx = await anchorProgramTxn.send()
+    for (let i=0; i<=10; i++) {
+      const anchorTxResult = await solanaProvider.connection.getTransaction(pendingTx.signature)
+      if (!anchorTxResult) {
+        await sleep(500)
+        continue
+      }
+      console.log(`anchor program $(pendingTx.signature) transaction msgs: ` + inspect(anchorTxResult.meta?.logMessages))
+      break
+    }
+
     // Add your test here.
     // const tx = await program.methods.initialize().rpc();
     // console.log('Your transaction signature', tx);
@@ -160,8 +181,9 @@ describe('governance-spl-tests', () => {
     //   side: side,
     // });
 
-    const numberChoices = 3;
-    const options =Array.from(Array(numberChoices).keys()).map(i => "" + i);
+    const numberChoices = 130;
+    // const options =Array.from(Array(numberChoices).keys()).map(i => String(i).padStart(3, '0'));
+    const options =Array.from(Array(numberChoices).keys()).map(i => "1");
     console.log("options", options)
     console.log(`Creating a proposal at ${realm.splGovId}, realm: ${realm.address}, governance: ${governanceData.pubkey}`)
     const txProposalCreation = new TransactionEnvelope(solanaProvider, []);
