@@ -11,6 +11,7 @@ import {
   TransactionInstruction,
   GetVersionedTransactionConfig,
   Connection,
+  SystemProgram,
 } from '@solana/web3.js';
 
 import { 
@@ -19,6 +20,7 @@ import {
   TieredBroadcaster,
   TransactionEnvelope,
   TransactionReceipt,
+  PendingTransaction,
 } from '@saberhq/solana-contrib'
 
 import { 
@@ -42,6 +44,7 @@ import {
   getVoteRecord,
   withSignOffProposal,
   withFinalizeVote,
+  withInsertTransaction,
 } from '@solana/spl-governance';
 
 import { 
@@ -92,6 +95,29 @@ async function createGovernance({tokenOwnerRecord, yesVotePercentage}:{
   return await getGovernance(tokenOwnerRecord.provider.connection, governancePubkey);
 }
 
+async function waitPendingTxn(solanaProvider:SolanaProvider, pendingTx: PendingTransaction) {
+  for (let i=0; i<=10; i++) {
+    const anchorTxResult = await solanaProvider.connection.getTransaction(pendingTx.signature)
+    if (!anchorTxResult) {
+      await sleep(500)
+      continue
+    }
+    // console.log(
+    //   "txn:" + pendingTx.signature,
+    //   inspect(anchorTxResult.transaction.message.accountKeys),
+    //   inspect(anchorTxResult.meta?.logMessages)
+    // )
+    console.log(
+      "txn:" + pendingTx.signature,
+      inspect(anchorTxResult.transaction.message.accountKeys),
+      inspect(anchorTxResult.meta?.logMessages),
+      // inspect(anchorTxResult.transaction.signatures),
+      // inspect(anchorTxResult.transaction.message.getAccountKeys()),
+    )
+    break
+  }
+}
+
 describe('governance-spl-tests', () => {
   // Configure the client to use the local cluster.
   // anchor.setProvider(anchor.AnchorProvider.env());
@@ -119,21 +145,13 @@ describe('governance-spl-tests', () => {
     .GovernanceSplTests as Program<GovernanceSplTests>;
 
   it('MultiChoice governance setup', async () => {
-    const anchorProgramTxn = new TransactionEnvelope(solanaProvider, []);
-    const typedArray = new Uint8Array([175, 175, 109, 31, 13, 152, 155, 237]);
-    // from anchor extend - check for 'match sighash'
-    const anchorProgramIx = new TransactionInstruction({data: Buffer.from(typedArray), keys: [], programId: program.programId  })
-    anchorProgramTxn.instructions.push(anchorProgramIx)
-    const pendingTx = await anchorProgramTxn.send()
-    for (let i=0; i<=10; i++) {
-      const anchorTxResult = await solanaProvider.connection.getTransaction(pendingTx.signature)
-      if (!anchorTxResult) {
-        await sleep(500)
-        continue
-      }
-      console.log(`anchor program $(pendingTx.signature) transaction msgs: ` + inspect(anchorTxResult.meta?.logMessages))
-      break
-    }
+    // const anchorProgramTxn = new TransactionEnvelope(solanaProvider, []);
+    // const typedArray = new Uint8Array([175, 175, 109, 31, 13, 152, 155, 237]);
+    // // from anchor extend - check for 'match sighash'
+    // const anchorProgramIx = new TransactionInstruction({data: Buffer.from(typedArray), keys: [], programId: program.programId  })
+    // anchorProgramTxn.instructions.push(anchorProgramIx)
+    // const pendingTx = await anchorProgramTxn.send()
+    // await waitPendingTxn(solanaProvider, pendingTx)
 
     // Add your test here.
     // const tx = await program.methods.initialize().rpc();
@@ -162,6 +180,25 @@ describe('governance-spl-tests', () => {
       solanaProvider.connection, testUserTokenOwnerRecordHelper.address
     );
 
+    // transfer testing
+    const randomPubkey = PublicKey.unique()
+    const randomPubkey2 = PublicKey.unique()
+    const transferIx: TransactionInstruction = SystemProgram.transfer({
+      fromPubkey: (anchor.getProvider() as AnchorProvider).wallet.publicKey,
+      toPubkey: randomPubkey2,
+      lamports: 100,
+    })
+    console.log(inspect(transferIx.keys), (anchor.getProvider() as AnchorProvider).wallet.publicKey)
+    const transferEnvelope = new TransactionEnvelope(solanaProvider, []);
+    transferEnvelope.instructions.push(transferIx)
+    const transferTxnSend = await transferEnvelope.send()
+    // transferEnvelope.simulate
+    await waitPendingTxn(solanaProvider, transferTxnSend)
+    if (1 == 1) {
+      return
+    }
+
+    // governance
     const governanceData = await createGovernance({
       tokenOwnerRecord: testUserTokenOwnerRecordHelper, yesVotePercentage: 30
     });
@@ -211,6 +248,21 @@ describe('governance-spl-tests', () => {
     console.log("OK proposal vote type: ", proposalData.account.voteType);
     console.log("OK proposal state: ", proposalData.account.state);
     console.log("OK proposal options: ", proposalData.account.options);
+
+    // await withInsertTransaction(
+    //   [anchorProgramIx], // instructions
+    //   realm.splGovId, // programId
+    //   PROGRAM_VERSION_V3, // programVersion
+    //   governanceData.pubkey, // governance
+    //   proposalPubkey, // proposal
+    //   testUserTokenOwnerRecord.pubkey, // tokenOwnerRecord
+    //   testUserTokenOwnerRecordHelper.owner.authority, // governanceAuthority: PublicKey,
+    //   index: number,
+    //   optionIndex: number,
+    //   holdUpTime: number,
+    //   transactionInstructions: InstructionData[],
+    //   payer: PublicKey,
+    // )
 
     const signer = testUserTokenOwnerRecordHelper.owner.canSign
       ? testUserTokenOwnerRecordHelper.owner
@@ -271,7 +323,7 @@ describe('governance-spl-tests', () => {
     console.log("OK voted proposal options: ", proposalVotedData.account.options);
 
     // max voting time in governance set to 1 seconds, we need to wait the time to pass and then we can finalize the proposal
-    // NOTE: the test validator cannot be easily forced to move time forward from TS code
+    // NOTE: the test validator cannot be easily forced to move time forward from JS/TS code
     const maxWaitingLoop = 10;
     for (let i=0; i<=maxWaitingLoop; i++) {
       try {
