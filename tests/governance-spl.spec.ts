@@ -9,9 +9,16 @@ import {
   Keypair,
   PublicKey,
   TransactionInstruction,
+  Transaction,
   GetVersionedTransactionConfig,
   Connection,
   SystemProgram,
+  LAMPORTS_PER_SOL,
+  TransactionSignature,
+  AccountInfo,
+  NonceInformation,
+  VersionedTransaction,
+  BlockhashWithExpiryBlockHeight
 } from '@solana/web3.js';
 
 import { 
@@ -45,6 +52,7 @@ import {
   withSignOffProposal,
   withFinalizeVote,
   withInsertTransaction,
+  SYSTEM_PROGRAM_ID,
 } from '@solana/spl-governance';
 
 import { 
@@ -55,6 +63,7 @@ import {
   SplGovHelper,
 } from '@marinade.finance/solana-test-utils'
 import { inspect } from 'util';
+import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
 
 
 async function createGovernance({tokenOwnerRecord, yesVotePercentage}:{
@@ -95,6 +104,7 @@ async function createGovernance({tokenOwnerRecord, yesVotePercentage}:{
   return await getGovernance(tokenOwnerRecord.provider.connection, governancePubkey);
 }
 
+// todo: tx.confirm() could be used instead
 async function waitPendingTxn(solanaProvider:SolanaProvider, pendingTx: PendingTransaction) {
   for (let i=0; i<=10; i++) {
     const anchorTxResult = await solanaProvider.connection.getTransaction(pendingTx.signature)
@@ -102,17 +112,14 @@ async function waitPendingTxn(solanaProvider:SolanaProvider, pendingTx: PendingT
       await sleep(500)
       continue
     }
-    // console.log(
-    //   "txn:" + pendingTx.signature,
-    //   inspect(anchorTxResult.transaction.message.accountKeys),
-    //   inspect(anchorTxResult.meta?.logMessages)
-    // )
+    if (anchorTxResult.meta?.err) {
+      console.log("ERROR:", anchorTxResult.meta?.err)
+    }
     console.log(
       "txn:" + pendingTx.signature,
       inspect(anchorTxResult.transaction.message.accountKeys),
       inspect(anchorTxResult.meta?.logMessages),
-      // inspect(anchorTxResult.transaction.signatures),
-      // inspect(anchorTxResult.transaction.message.getAccountKeys()),
+      inspect(anchorTxResult.meta),
     )
     break
   }
@@ -124,6 +131,7 @@ describe('governance-spl-tests', () => {
   let anchorOptions = AnchorProvider.defaultOptions()
   anchorOptions.commitment = "confirmed"
   anchorOptions.preflightCommitment = "confirmed"
+  anchorOptions.skipPreflight = true;
   anchor.setProvider(anchor.AnchorProvider.local(undefined, anchorOptions))
 
   const broadcaster = new TieredBroadcaster(
@@ -133,7 +141,6 @@ describe('governance-spl-tests', () => {
   );
   const confirmOpts = (anchor.getProvider() as AnchorProvider).opts;
   // do we want the pre-flight or not? :-)
-  confirmOpts.skipPreflight = true;
   const solanaProvider = new SolanaProvider(
     anchor.getProvider().connection,
     broadcaster,
@@ -143,6 +150,33 @@ describe('governance-spl-tests', () => {
 
   const program = anchor.workspace
     .GovernanceSplTests as Program<GovernanceSplTests>;
+
+  it.only("Testing web3 calls with transfer", async() => {
+    (async () => {
+      const walletPayer = ((anchor.getProvider() as AnchorProvider).wallet as NodeWallet).payer
+      const randomWallet = Keypair.generate();
+    
+      const ix = SystemProgram.transfer({
+        fromPubkey: walletPayer.publicKey,
+        toPubkey: randomWallet.publicKey,
+        lamports: LAMPORTS_PER_SOL / 100,
+      })
+
+      // https://www.quicknode.com/guides/solana-development/how-to-use-versioned-transactions-on-solana
+      const latestBlockhash: BlockhashWithExpiryBlockHeight = await solanaProvider.connection.getLatestBlockhash('processed')
+      const vTxn: VersionedTransaction = new VersionedTransaction(transaction.compileMessage())
+      const simulatedResponse = await solanaProvider.connection.simulateTransaction(vTxn)
+      
+      // deprecated call
+      // const transaction = new Transaction().add(
+      //   ix
+      // );
+      // const simulatedResponse = await solanaProvider.connection.simulateTransaction(transaction, [walletPayer], true)
+      
+      console.log(simulatedResponse);
+      console.log(simulatedResponse.value.accounts);
+    })();
+  })
 
   it('MultiChoice governance setup', async () => {
     // const anchorProgramTxn = new TransactionEnvelope(solanaProvider, []);
@@ -165,7 +199,7 @@ describe('governance-spl-tests', () => {
       name: "test_realm_from_ts",
       communityMint: coummunityMint,
       councilMint: councilMint
-    });
+    })
 
     const testUser = new Keypair();
     const keypairSignerHelper = new KeypairSignerHelper(testUser);
@@ -174,26 +208,52 @@ describe('governance-spl-tests', () => {
       realm,
       side,
       owner: keypairSignerHelper,
-    });
+    })
     await testUserTokenOwnerRecordHelper.deposit(new BN(1000));
     const testUserTokenOwnerRecord = await getTokenOwnerRecord(
       solanaProvider.connection, testUserTokenOwnerRecordHelper.address
-    );
+    )
 
     // transfer testing
-    const randomPubkey = PublicKey.unique()
-    const randomPubkey2 = PublicKey.unique()
+    const walletPubkey = (anchor.getProvider() as AnchorProvider).wallet.publicKey
+    const randomPrivatekey = Keypair.generate()
+    
+    // console.log("walled pk + random pk", walletPubkey, randomPrivatekey.publicKey)
+    // // airdropping the new account that makes it created (done in a separate txn)
+    // const ai1 = await solanaProvider.connection.getAccountInfo(randomPrivatekey.publicKey)
+    // console.log("before airdrop account: ", inspect(ai1))
+    // const txAirdropSignature: TransactionSignature = await solanaProvider.connection.requestAirdrop(
+    //   randomPrivatekey.publicKey,
+    //   LAMPORTS_PER_SOL,
+    // );
+    // await solanaProvider.connection.confirmTransaction(txAirdropSignature);
+    // const ai2: AccountInfo<Buffer> | null = await solanaProvider.connection.getAccountInfo(randomPrivatekey.publicKey)
+    // console.log("airdropped account: ", inspect(ai2))
+
+    // const createIx: TransactionInstruction = SystemProgram.createAccount({
+    //   fromPubkey: walletPubkey,
+    //   newAccountPubkey: randomPrivatekey.publicKey,
+    //   space: 0,
+    //   lamports: LAMPORTS_PER_SOL,
+    //   programId: SYSTEM_PROGRAM_ID
+    // })
+    // solana transfer 8njcr6FbteVdXoGXZrZUKeicLBLBsRtjwyzqzfE28ETx 0.001 --allow-unfunded-recipient
     const transferIx: TransactionInstruction = SystemProgram.transfer({
-      fromPubkey: (anchor.getProvider() as AnchorProvider).wallet.publicKey,
-      toPubkey: randomPubkey2,
-      lamports: 100,
+      fromPubkey: walletPubkey,
+      toPubkey: randomPrivatekey.publicKey,
+      lamports: 0.35 * LAMPORTS_PER_SOL, // need to be enough for rent pay of a new account
     })
-    console.log(inspect(transferIx.keys), (anchor.getProvider() as AnchorProvider).wallet.publicKey)
+    // console.log("transfer ix keys: ", inspect(transferIx.keys))
     const transferEnvelope = new TransactionEnvelope(solanaProvider, []);
     transferEnvelope.instructions.push(transferIx)
-    const transferTxnSend = await transferEnvelope.send()
-    // transferEnvelope.simulate
-    await waitPendingTxn(solanaProvider, transferTxnSend)
+    // transferEnvelope.addSigners(randomPrivatekey)
+    // const transferTxnSend = await transferEnvelope.send()
+    // await waitPendingTxn(solanaProvider, transferTxnSend)
+    // ---
+    const simulatedTx = await transferEnvelope.simulate();
+    console.log(inspect(simulatedTx.context))
+    console.log(inspect(simulatedTx.value))
+    // ---
     if (1 == 1) {
       return
     }
