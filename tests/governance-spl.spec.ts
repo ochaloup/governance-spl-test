@@ -18,7 +18,8 @@ import {
   AccountInfo,
   NonceInformation,
   VersionedTransaction,
-  BlockhashWithExpiryBlockHeight
+  BlockhashWithExpiryBlockHeight,
+  TransactionMessage
 } from '@solana/web3.js';
 
 import { 
@@ -152,30 +153,50 @@ describe('governance-spl-tests', () => {
     .GovernanceSplTests as Program<GovernanceSplTests>;
 
   it.only("Testing web3 calls with transfer", async() => {
-    (async () => {
-      const walletPayer = ((anchor.getProvider() as AnchorProvider).wallet as NodeWallet).payer
-      const randomWallet = Keypair.generate();
-    
-      const ix = SystemProgram.transfer({
-        fromPubkey: walletPayer.publicKey,
-        toPubkey: randomWallet.publicKey,
-        lamports: LAMPORTS_PER_SOL / 100,
-      })
+    const walletPayer = ((anchor.getProvider() as AnchorProvider).wallet as NodeWallet).payer
+    const randomWallet = Keypair.generate();
+  
+    const ix = SystemProgram.transfer({
+      fromPubkey: walletPayer.publicKey,
+      toPubkey: randomWallet.publicKey,
+      lamports: LAMPORTS_PER_SOL / 100,
+    })
 
-      // https://www.quicknode.com/guides/solana-development/how-to-use-versioned-transactions-on-solana
-      const latestBlockhash: BlockhashWithExpiryBlockHeight = await solanaProvider.connection.getLatestBlockhash('processed')
-      const vTxn: VersionedTransaction = new VersionedTransaction(transaction.compileMessage())
-      const simulatedResponse = await solanaProvider.connection.simulateTransaction(vTxn)
-      
-      // deprecated call
-      // const transaction = new Transaction().add(
-      //   ix
-      // );
-      // const simulatedResponse = await solanaProvider.connection.simulateTransaction(transaction, [walletPayer], true)
-      
-      console.log(simulatedResponse);
-      console.log(simulatedResponse.value.accounts);
-    })();
+    // https://www.quicknode.com/guides/solana-development/how-to-use-versioned-transactions-on-solana
+    const latestBlockhash: BlockhashWithExpiryBlockHeight = await solanaProvider.connection.getLatestBlockhash('processed')
+    const messageV0 = new TransactionMessage({
+      payerKey: walletPayer.publicKey,
+      recentBlockhash: latestBlockhash.blockhash,
+      instructions: [ix]
+    }).compileToV0Message();
+    const vTxn = new VersionedTransaction(messageV0)
+    vTxn.sign([walletPayer])
+    // --- simulate
+    const simulatedResponse = await solanaProvider.connection.simulateTransaction(vTxn)
+    console.log(simulatedResponse)
+    console.log(simulatedResponse.value.accounts)
+
+    // --- send
+    const txid = await solanaProvider.connection.sendTransaction(vTxn, {skipPreflight: true, maxRetries: 5});
+    // -- confirmation get
+    const confirmation = await solanaProvider.connection.confirmTransaction({
+      signature: txid,
+      blockhash: latestBlockhash.blockhash,
+      lastValidBlockHeight: latestBlockhash.lastValidBlockHeight
+    })
+    if (confirmation.value.err) {
+      throw new Error("   ❌ - Transaction not confirmed.")
+    } else {
+      console.log("Txn passed: ", inspect(confirmation))
+      const tx = await solanaProvider.connection.getTransaction(txid, {maxSupportedTransactionVersion: 0})
+      console.log(inspect(tx), inspect(tx?.transaction.message.getAccountKeys()))
+    }
+    
+    // // deprecated call
+    // const transaction = new Transaction().add(
+    //   ix
+    // );
+    // const simulatedResponse = await solanaProvider.connection.simulateTransaction(transaction, [walletPayer], true)
   })
 
   it('MultiChoice governance setup', async () => {
@@ -187,7 +208,7 @@ describe('governance-spl-tests', () => {
     // const pendingTx = await anchorProgramTxn.send()
     // await waitPendingTxn(solanaProvider, pendingTx)
 
-    // Add your test here.
+    // Add your test here./*  */
     // const tx = await program.methods.initialize().rpc();
     // console.log('Your transaction signature', tx);
     const councilMint: MintHelper = await MintHelper.create({provider: solanaProvider});
@@ -196,7 +217,7 @@ describe('governance-spl-tests', () => {
     const realm = await RealmHelper.create({
       provider: solanaProvider,
       splGovVersion: PROGRAM_VERSION_V3,
-      name: "test_realm_from_ts",
+      name: "test_realm_from_ts",/*  */
       communityMint: coummunityMint,
       councilMint: councilMint
     })
